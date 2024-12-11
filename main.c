@@ -78,11 +78,36 @@ int main(int argc, char** argv)
             ptrs[n-1][i] = str[i];
         }
     }
-    // main part
-
-    // ending
-    dbl_free(ptrs, n);
-    free(str);
+    n--;
     fclose(file);
+    // main part
+    int res = changeText(ptrs, n, argv[2]);
+    if (res)
+    {
+        printf("Error %d\n", res+10);
+        dbl_free(ptrs, n);
+        free(str);
+        return res+10;
+    }
+    else
+    {
+        file = fopen(argv[1], "w");
+        if (file == NULL)
+        {
+            printf("Unexpected error while opening file\n");
+            dbl_free(ptrs, n);
+            free(str);
+            return 1;
+        }
+        for (int i = 0; i < n; i++)
+        {
+            fprintf(file, "%s", ptrs[i]);
+        }
+    }
+    fclose(file);
+    // ending
+    printf("Success\n");
+    dbl_free(ptrs, n+1);
+    free(str);
     return 0;
 }
