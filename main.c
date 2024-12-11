@@ -78,10 +78,9 @@ int main(int argc, char** argv)
             ptrs[n-1][i] = str[i];
         }
     }
-    n--;
     fclose(file);
     // main part
-    int res = changeText(ptrs, n, argv[2]);
+    int res = changeText(ptrs, n-1, argv[2]);
     if (res)
     {
         printf("Error %d\n", res+10);
@@ -99,15 +98,18 @@ int main(int argc, char** argv)
             free(str);
             return 1;
         }
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n-1; i++)
         {
-            fprintf(file, "%s", ptrs[i]);
+            if (ptrs[i] != NULL)
+            {
+                fprintf(file, "%s", ptrs[i]);
+            }
         }
     }
     fclose(file);
     // ending
     printf("Success\n");
-    dbl_free(ptrs, n+1);
+    dbl_free(ptrs, n);
     free(str);
     return 0;
 }
