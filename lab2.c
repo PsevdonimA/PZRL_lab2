@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <regex.h>
 #include <string.h>
@@ -8,6 +7,12 @@
 // --- ADDITIONS ---
 
 const int char_s = (int)sizeof(char);
+
+enum E_adding
+{
+    E_FRONT = 0,
+    E_BACK = 1
+};
 
 int checkArgv(int argc, char** argv) // 0 - correct; other numbers - errors
 {
@@ -22,8 +27,6 @@ int checkArgv(int argc, char** argv) // 0 - correct; other numbers - errors
     return 0;
 }
 
-// --- REPLACE ---
-
 int addsize(char** str)
 {
     int n = (int)strlen(*str);
@@ -35,6 +38,8 @@ int addsize(char** str)
     *str = new_str;
     return 0;
 }
+
+// --- REPLACE ---
 
 int textReplace(char** ptrs, int n, char* str)
 {
@@ -179,9 +184,21 @@ int textDelete(char** ptrs, int n, char* str)
         regfree(&delreg);
         return 2; // Reg compile error
     }
+    char* buff;
     for (int i = 0; i < n; i++)
     {
-        regnok = regexec(&delreg, ptrs[i], 0, NULL, 0);
+        buff = (char*)malloc(char_s * ((int)strlen(ptrs[i])-1));
+        if (buff == NULL)
+        {
+            free(reg);
+            regfree(&delreg);
+            return 1;
+        }
+        for (int j = 0; j < (int)strlen(ptrs[i])-1; j++)
+        {
+            buff[j] = ptrs[i][j];
+        }
+        regnok = regexec(&delreg, buff, 0, NULL, 0);
         if (!regnok)
         {
             free(ptrs[i]);
@@ -190,13 +207,72 @@ int textDelete(char** ptrs, int n, char* str)
         else if (regnok == REG_NOMATCH){}
         else
         {
+            free(buff);
             free(reg);
             regfree(&delreg);
             return 3; // unexpected error
         }
+        free(buff);
     }
     free(reg);
     regfree(&delreg);
+    return 0;
+}
+
+// --- ADD FRONT/BACK ---
+
+int textAdd(char** ptrs, int n, char* str, int connection)
+{
+    int l = (int)strlen(str) - 5;
+    // Get text
+    char* text = (char*)malloc(char_s * l);
+    if (text == NULL)
+    {
+        return 1; // allocation error
+    }
+    for (int i = 4; i < l+4; i++)
+    {
+        text[i-4] = str[i];
+    }
+    // Add text
+    char* buff;
+    int lstr = 0;
+    for (int i = 0; i < n; i++)
+    {
+        lstr = (int)strlen(ptrs[i]) - 1;
+        buff = (char*)malloc(char_s * (lstr + l + 1));
+        if (buff == NULL)
+        {
+            free(text);
+            return 1;
+        }
+        if (connection == E_FRONT)
+        {
+            for (int j = 0; j < l; j++)
+            {
+                buff[j] = text[j];
+            }
+            for (int j = l; j < l+lstr; j++)
+            {
+                buff[j] = ptrs[i][j-l];
+            }
+        }
+        else
+        {
+            for (int j = 0; j < lstr; j++)
+            {
+                buff[j] = ptrs[i][j];
+            }
+            for (int j = lstr; j < l+lstr; j++)
+            {
+                buff[j] = text[j-lstr];
+            }
+        }
+        buff[lstr+l] = '\n';
+        free(ptrs[i]);
+        ptrs[i] = buff;
+    }
+    free(text);
     return 0;
 }
 
@@ -216,8 +292,44 @@ int changeText(char** ptrs, int n, char* str)
         }
     }
     regex_t regex;
+    // Insert front
+    int regnok = regcomp(&regex, "^s\\/\\^\\/[^\\/][^\\/]*\\/$", 0);
+    if (regnok)
+    {
+        regfree(&regex);
+        return 2; // Reg compile error
+    }
+    regnok = regexec(&regex, str, 0, NULL, 0);
+    if (!regnok)
+    {
+        if (textAdd(ptrs, n, str, E_FRONT))
+        {
+            return 6; // Error in textAdd (FRONT)
+        }
+        regfree(&regex);
+        return 0;
+    }
+    regfree(&regex);
+    // Insert back
+    regnok = regcomp(&regex, "^s\\/\\$\\/[^\\/][^\\/]*\\/$", 0);
+    if (regnok)
+    {
+        regfree(&regex);
+        return 2; // Reg compile error
+    }
+    regnok = regexec(&regex, str, 0, NULL, 0);
+    if (!regnok)
+    {
+        if (textAdd(ptrs, n, str, E_BACK))
+        {
+            return 7; // Error in textAdd (BACK)
+        }
+        regfree(&regex);
+        return 0;
+    }
+    regfree(&regex);
     // Replace
-    int regnok = regcomp(&regex, "^s\\/[^\\/][^\\/]*\\/[^\\/]*\\/$", 0);
+    regnok = regcomp(&regex, "^s\\/[^\\/][^\\/]*\\/[^\\/]*\\/$", 0);
     if (regnok)
     {
         regfree(&regex);
@@ -248,34 +360,6 @@ int changeText(char** ptrs, int n, char* str)
         {
             return 5; // Error in textDelete
         }
-        regfree(&regex);
-        return 0;
-    }
-    regfree(&regex);
-    // Insert front
-    regnok = regcomp(&regex, "^s\\/\\^\\/[^\\/][^\\/]*\\/$", 0);
-    if (regnok)
-    {
-        regfree(&regex);
-        return 2; // Reg compile error
-    }
-    regnok = regexec(&regex, str, 0, NULL, 0);
-    if (!regnok)
-    {
-        regfree(&regex);
-        return 0;
-    }
-    regfree(&regex);
-    // Insert back
-    regnok = regcomp(&regex, "^s\\/\\$\\/[^\\/][^\\/]*\\/$", 0);
-    if (regnok)
-    {
-        regfree(&regex);
-        return 2; // Reg compile error
-    }
-    regnok = regexec(&regex, str, 0, NULL, 0);
-    if (!regnok)
-    {
         regfree(&regex);
         return 0;
     }
