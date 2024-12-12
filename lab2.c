@@ -167,7 +167,7 @@ int textReplace(char** ptrs, int n, char* str)
 int textDelete(char** ptrs, int n, char* str)
 {
     int l = (int)strlen(str);
-    char* reg = (char*)malloc(char_s * (l-3));
+    char* reg = (char*)malloc(char_s * (l-2));
     if (reg == NULL)
     {
         return 1; // allocation error
@@ -176,6 +176,7 @@ int textDelete(char** ptrs, int n, char* str)
     {
         reg[i-1] = str[i];
     }
+    reg[l-3] = '\0';
     regex_t delreg;
     int regnok = regcomp(&delreg, reg, 0);
     if (regnok)
@@ -187,16 +188,24 @@ int textDelete(char** ptrs, int n, char* str)
     char* buff;
     for (int i = 0; i < n; i++)
     {
-        buff = (char*)malloc(char_s * ((int)strlen(ptrs[i])-1));
+        buff = (char*)malloc(char_s * (int)strlen(ptrs[i]));
         if (buff == NULL)
         {
             free(reg);
             regfree(&delreg);
             return 1;
         }
-        for (int j = 0; j < (int)strlen(ptrs[i])-1; j++)
+        for (int j = 0; j < (int)strlen(ptrs[i]); j++)
         {
-            buff[j] = ptrs[i][j];
+            if (ptrs[i][j] == '\n' || ptrs[i][j] == '\0')
+            {
+                buff[j] = '\0';
+                break;
+            }
+            else
+            {
+                buff[j] = ptrs[i][j];
+            }
         }
         regnok = regexec(&delreg, buff, 0, NULL, 0);
         if (!regnok)
