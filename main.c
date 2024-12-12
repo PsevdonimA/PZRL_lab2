@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "lab2.h"
+#include "lab2f.h"
 
 void dbl_free(char** ptr, int n)
 {
