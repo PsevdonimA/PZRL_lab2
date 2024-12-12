@@ -234,7 +234,7 @@ int textAdd(char** ptrs, int n, char* str, int connection)
 {
     int l = (int)strlen(str) - 5;
     // Get text
-    char* text = (char*)malloc(char_s * l);
+    char* text = (char*)malloc(char_s * (l+1));
     if (text == NULL)
     {
         return 1; // allocation error
@@ -243,6 +243,7 @@ int textAdd(char** ptrs, int n, char* str, int connection)
     {
         text[i-4] = str[i];
     }
+    text[l] = '\0';
     // Add text
     char* buff;
     int lstr = 0;
